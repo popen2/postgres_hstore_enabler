@@ -287,6 +287,7 @@ class Command(BaseCommand):
         dbconnection = psycopg2.connect(
             database = db_settings['NAME'],
             user     = db_settings['USER'],
+            password = db_settings['PASSWORD'],
             host     = db_settings['HOST'] or 'localhost',
             port     = db_settings['PORT'] or 5432,
         )
