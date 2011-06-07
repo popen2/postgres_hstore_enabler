@@ -1,0 +1,2 @@
+Installs support for the 'hstore' type in a PostgreSQL database.
+After configuring the database settings in settings.DATABASES, run ./manage.py enable_hstore .
