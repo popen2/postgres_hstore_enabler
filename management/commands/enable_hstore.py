@@ -270,24 +270,37 @@ class Command(BaseCommand):
     help = 'Adds hstore support to a PostgreSQL database'
     can_import_settings = True
 
-    def handle(self, *args, **options):
-        # TODO: Check that the project is using the PostgreSQL backend
-
+    def _install_for_database(self, db_name, db_settings):
         try:
             import psycopg2
         except ImportError:
             raise CommandError('The module psycopg2 couldn\'t be imported.')
 
-        import settings
+        # This validates that the database is indeed a Postgres database. Note
+        # that we don't check for Django's explicit module name, since when
+        # using hstore we usually replace our database ENGINE with a middle
+        # engine, therefore our database name won't start with django.XXX.
 
-        dsn = { 'database': settings.DATABASE_NAME, 'user': settings.DATABASE_USER, \
-                'host': settings.DATABASE_HOST or 'localhost', 'port': settings.DATABASE_PORT or 5432,
-        }
+        if not db_settings['ENGINE'].endswith('postgresql_psycopg2'):
+            return
 
-        # Handle exceptions properly
-        dbconnection = psycopg2.connect(**dsn)
+        dbconnection = psycopg2.connect(
+            database = db_settings['NAME'],
+            user     = db_settings['USER'],
+            host     = db_settings['HOST'] or 'localhost',
+            port     = db_settings['PORT'] or 5432,
+        )
+
         dbcursor = dbconnection.cursor()
-        dbcursor.execute(enable_hstore_sql)
-        dbconnection.close()
+        try:
+            dbcursor.execute(enable_hstore_sql)
+        finally:
+            dbconnection.close()
 
-        print 'Successfully enabled hstore in your PostgreSQL database.'
+        print 'Successfully enabled hstore for %s database.' % (db_name, )
+
+    def handle(self, *args, **options):
+        from django.conf import settings
+
+        for db_name, db_settings in settings.DATABASES.iteritems():
+            self._install_for_database(db_name, db_settings)
